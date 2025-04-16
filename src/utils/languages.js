@@ -1,0 +1,133 @@
+// Language configuration for translation
+export const languages = {
+  af: { name: 'Afrikaans', nativeName: 'Afrikaans', isRTL: false },
+  sq: { name: 'Albanian', nativeName: 'Shqip', isRTL: false },
+  am: { name: 'Amharic', nativeName: 'አማርኛ', isRTL: false },
+  ar: { name: 'Arabic', nativeName: 'العربية', isRTL: true },
+  hy: { name: 'Armenian', nativeName: 'Հայերեն', isRTL: false },
+  az: { name: 'Azerbaijani', nativeName: 'Azərbaycan', isRTL: false },
+  eu: { name: 'Basque', nativeName: 'Euskara', isRTL: false },
+  be: { name: 'Belarusian', nativeName: 'Беларуская', isRTL: false },
+  bn: { name: 'Bengali', nativeName: 'বাংলা', isRTL: false },
+  bs: { name: 'Bosnian', nativeName: 'Bosanski', isRTL: false },
+  bg: { name: 'Bulgarian', nativeName: 'Български', isRTL: false },
+  ca: { name: 'Catalan', nativeName: 'Català', isRTL: false },
+  ceb: { name: 'Cebuano', nativeName: 'Cebuano', isRTL: false },
+  zh: { name: 'Chinese (Simplified)', nativeName: '中文（简体）', isRTL: false },
+  'zh-TW': { name: 'Chinese (Traditional)', nativeName: '中文（繁體）', isRTL: false },
+  co: { name: 'Corsican', nativeName: 'Corsu', isRTL: false },
+  hr: { name: 'Croatian', nativeName: 'Hrvatski', isRTL: false },
+  cs: { name: 'Czech', nativeName: 'Čeština', isRTL: false },
+  da: { name: 'Danish', nativeName: 'Dansk', isRTL: false },
+  nl: { name: 'Dutch', nativeName: 'Nederlands', isRTL: false },
+  en: { name: 'English', nativeName: 'English', isRTL: false },
+  eo: { name: 'Esperanto', nativeName: 'Esperanto', isRTL: false },
+  et: { name: 'Estonian', nativeName: 'Eesti', isRTL: false },
+  fa: { name: 'Persian', nativeName: 'فارسی', isRTL: true },
+  fi: { name: 'Finnish', nativeName: 'Suomi', isRTL: false },
+  fr: { name: 'French', nativeName: 'Français', isRTL: false },
+  fy: { name: 'Frisian', nativeName: 'Frysk', isRTL: false },
+  gl: { name: 'Galician', nativeName: 'Galego', isRTL: false },
+  ka: { name: 'Georgian', nativeName: 'ქართული', isRTL: false },
+  de: { name: 'German', nativeName: 'Deutsch', isRTL: false },
+  el: { name: 'Greek', nativeName: 'Ελληνικά', isRTL: false },
+  gu: { name: 'Gujarati', nativeName: 'ગુજરાતી', isRTL: false },
+  ht: { name: 'Haitian Creole', nativeName: 'Kreyòl Ayisyen', isRTL: false },
+  ha: { name: 'Hausa', nativeName: 'Hausa', isRTL: false },
+  haw: { name: 'Hawaiian', nativeName: 'ʻŌlelo Hawaiʻi', isRTL: false },
+  he: { name: 'Hebrew', nativeName: 'עברית', isRTL: true },
+  hi: { name: 'Hindi', nativeName: 'हिन्दी', isRTL: false },
+  hmn: { name: 'Hmong', nativeName: 'Hmong', isRTL: false },
+  hu: { name: 'Hungarian', nativeName: 'Magyar', isRTL: false },
+  is: { name: 'Icelandic', nativeName: 'Íslenska', isRTL: false },
+  ig: { name: 'Igbo', nativeName: 'Igbo', isRTL: false },
+  id: { name: 'Indonesian', nativeName: 'Bahasa Indonesia', isRTL: false },
+  ga: { name: 'Irish', nativeName: 'Gaeilge', isRTL: false },
+  it: { name: 'Italian', nativeName: 'Italiano', isRTL: false },
+  ja: { name: 'Japanese', nativeName: '日本語', isRTL: false },
+  jv: { name: 'Javanese', nativeName: 'Basa Jawa', isRTL: false },
+  kn: { name: 'Kannada', nativeName: 'ಕನ್ನಡ', isRTL: false },
+  kk: { name: 'Kazakh', nativeName: 'Қазақ', isRTL: false },
+  km: { name: 'Khmer', nativeName: 'ខ្មែរ', isRTL: false },
+  ko: { name: 'Korean', nativeName: '한국어', isRTL: false },
+  ku: { name: 'Kurdish', nativeName: 'Kurdî', isRTL: true },
+  ky: { name: 'Kyrgyz', nativeName: 'Кыргызча', isRTL: false },
+  lo: { name: 'Lao', nativeName: 'ລາວ', isRTL: false },
+  la: { name: 'Latin', nativeName: 'Latina', isRTL: false },
+  lv: { name: 'Latvian', nativeName: 'Latviešu', isRTL: false },
+  lt: { name: 'Lithuanian', nativeName: 'Lietuvių', isRTL: false },
+  lb: { name: 'Luxembourgish', nativeName: 'Lëtzebuergesch', isRTL: false },
+  mk: { name: 'Macedonian', nativeName: 'Македонски', isRTL: false },
+  mg: { name: 'Malagasy', nativeName: 'Malagasy', isRTL: false },
+  ms: { name: 'Malay', nativeName: 'Bahasa Melayu', isRTL: false },
+  ml: { name: 'Malayalam', nativeName: 'മലയാളം', isRTL: false },
+  mt: { name: 'Maltese', nativeName: 'Malti', isRTL: false },
+  mi: { name: 'Maori', nativeName: 'Māori', isRTL: false },
+  mr: { name: 'Marathi', nativeName: 'मराठी', isRTL: false },
+  mn: { name: 'Mongolian', nativeName: 'Монгол', isRTL: false },
+  my: { name: 'Myanmar (Burmese)', nativeName: 'မြန်မာ', isRTL: false },
+  ne: { name: 'Nepali', nativeName: 'नेपाली', isRTL: false },
+  no: { name: 'Norwegian', nativeName: 'Norsk', isRTL: false },
+  ny: { name: 'Nyanja (Chichewa)', nativeName: 'Chichewa', isRTL: false },
+  or: { name: 'Odia (Oriya)', nativeName: 'ଓଡ଼ିଆ', isRTL: false },
+  ps: { name: 'Pashto', nativeName: 'پښتو', isRTL: true },
+  pl: { name: 'Polish', nativeName: 'Polski', isRTL: false },
+  pt: { name: 'Portuguese', nativeName: 'Português', isRTL: false },
+  pa: { name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ', isRTL: false },
+  ro: { name: 'Romanian', nativeName: 'Română', isRTL: false },
+  ru: { name: 'Russian', nativeName: 'Русский', isRTL: false },
+  sm: { name: 'Samoan', nativeName: 'Gagana Sāmoa', isRTL: false },
+  gd: { name: 'Scots Gaelic', nativeName: 'Gàidhlig', isRTL: false },
+  sr: { name: 'Serbian', nativeName: 'Српски', isRTL: false },
+  st: { name: 'Sesotho', nativeName: 'Sesotho', isRTL: false },
+  sn: { name: 'Shona', nativeName: 'Shona', isRTL: false },
+  sd: { name: 'Sindhi', nativeName: 'سنڌي', isRTL: true },
+  si: { name: 'Sinhala', nativeName: 'සිංහල', isRTL: false },
+  sk: { name: 'Slovak', nativeName: 'Slovenčina', isRTL: false },
+  sl: { name: 'Slovenian', nativeName: 'Slovenščina', isRTL: false },
+  so: { name: 'Somali', nativeName: 'Soomaali', isRTL: false },
+  es: { name: 'Spanish', nativeName: 'Español', isRTL: false },
+  su: { name: 'Sundanese', nativeName: 'Basa Sunda', isRTL: false },
+  sw: { name: 'Swahili', nativeName: 'Kiswahili', isRTL: false },
+  sv: { name: 'Swedish', nativeName: 'Svenska', isRTL: false },
+  tl: { name: 'Tagalog (Filipino)', nativeName: 'Tagalog', isRTL: false },
+  tg: { name: 'Tajik', nativeName: 'Тоҷикӣ', isRTL: false },
+  ta: { name: 'Tamil', nativeName: 'தமிழ்', isRTL: false },
+  tt: { name: 'Tatar', nativeName: 'Татар', isRTL: false },
+  te: { name: 'Telugu', nativeName: 'తెలుగు', isRTL: false },
+  th: { name: 'Thai', nativeName: 'ไทย', isRTL: false },
+  tr: { name: 'Turkish', nativeName: 'Türkçe', isRTL: false },
+  tk: { name: 'Turkmen', nativeName: 'Türkmen', isRTL: false },
+  uk: { name: 'Ukrainian', nativeName: 'Українська', isRTL: false },
+  ur: { name: 'Urdu', nativeName: 'اردو', isRTL: true },
+  ug: { name: 'Uyghur', nativeName: 'ئۇيغۇرچە', isRTL: true },
+  uz: { name: 'Uzbek', nativeName: "O'zbek", isRTL: false },
+  vi: { name: 'Vietnamese', nativeName: 'Tiếng Việt', isRTL: false },
+  cy: { name: 'Welsh', nativeName: 'Cymraeg', isRTL: false },
+  xh: { name: 'Xhosa', nativeName: 'isiXhosa', isRTL: false },
+  yi: { name: 'Yiddish', nativeName: 'ייִדיש', isRTL: true },
+  yo: { name: 'Yoruba', nativeName: 'Yorùbá', isRTL: false },
+  zu: { name: 'Zulu', nativeName: 'isiZulu', isRTL: false }
+};
+
+// Helper functions
+export function isRTLLanguage(langCode) {
+  return languages[langCode]?.isRTL || false;
+}
+
+export function getLanguageName(langCode, useNative = true) {
+  const lang = languages[langCode];
+  if (!lang) return langCode;
+  return useNative ? lang.nativeName : lang.name;
+}
+
+export function getLanguageDirection(langCode) {
+  return isRTLLanguage(langCode) ? 'rtl' : 'ltr';
+}
+
+export function getSupportedLanguages() {
+  return Object.entries(languages).map(([code, lang]) => ({
+    code,
+    ...lang
+  }));
+}

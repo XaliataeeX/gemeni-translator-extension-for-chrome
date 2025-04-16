@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Settings - Gemini Translator</title>
+  <link rel="stylesheet" href="src/styles/design-system-new.css">
+  <style>
+    body { 
+      font-family: var(--font-family-base); 
+      padding: var(--spacing-xl); 
+      background-color: var(--color-gray-100);
+      color: var(--color-text-primary);
+      line-height: var(--line-height-normal);
+      transition: background-color var(--transition-normal), color var(--transition-normal);
+    }
+    
+    .container { 
+      max-width: 500px; 
+      margin: auto; 
+      background-color: var(--color-background);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: var(--spacing-xl);
+      animation: fadeIn var(--transition-normal);
+      border: 1px solid var(--color-border);
+    }
+    
+    h2 {
+      font-family: var(--font-family-display);
+      font-weight: var(--font-weight-semibold);
+      font-size: var(--font-size-2xl);
+      margin-top: 0;
+      margin-bottom: var(--spacing-lg);
+      color: var(--color-text-primary);
+    }
+    
+    h3 {
+      font-family: var(--font-family-display);
+      font-weight: var(--font-weight-medium);
+      font-size: var(--font-size-lg);
+      margin-top: var(--spacing-xl);
+      margin-bottom: var(--spacing-md);
+      color: var(--color-text-primary);
+    }
+    
+    .input-group {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .input-group .form-control {
+      flex: 1;
+    }
+    
+    .translation-mode {
+      margin-bottom: var(--spacing-lg);
+    }
+    
+    .select-container {
+      margin-bottom: var(--spacing-sm);
+    }
+    
+    .custom-mode {
+      width: 100%;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border: 1px solid var(--color-gray-300);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-sm);
+      margin-top: var(--spacing-xs);
+    }
+    
+    ul { 
+      list-style: none; 
+      padding: 0; 
+      margin-top: var(--spacing-md);
+    }
+    
+    li { 
+      padding: var(--spacing-sm) var(--spacing-md); 
+      border: 1px solid var(--color-gray-300); 
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--spacing-xs); 
+      display: flex; 
+      justify-content: space-between;
+      align-items: center;
+      background-color: var(--color-gray-100);
+      transition: all var(--transition-fast);
+    }
+    
+    li:hover {
+      border-color: var(--color-gray-400);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: var(--spacing-xs);
+    }
+    
+    .button-group button {
+      padding: var(--spacing-2xs) var(--spacing-sm);
+      border-radius: var(--radius-sm);
+      border: none;
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .copyBtn {
+      background-color: var(--color-gray-200);
+      color: var(--color-gray-700);
+    }
+    
+    .copyBtn:hover {
+      background-color: var(--color-gray-300);
+    }
+    
+    .deleteBtn {
+      background-color: rgba(255, 59, 48, 0.1);
+      color: var(--color-error);
+    }
+    
+    .deleteBtn:hover {
+      background-color: rgba(255, 59, 48, 0.2);
+    }
+    
+    .status {
+      position: fixed;
+      bottom: var(--spacing-lg);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: var(--spacing-sm) var(--spacing-lg);
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      box-shadow: var(--shadow-md);
+      animation: slideInUp var(--transition-normal);
+    }
+    
+    .success {
+      background-color: var(--color-success);
+      color: white;
+    }
+    
+    .error {
+      background-color: var(--color-error);
+      color: white;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: var(--color-gray-950);
+        color: var(--color-gray-50);
+      }
+      
+      .container {
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+      }
+      
+      h2, h3 {
+        color: var(--color-text-primary);
+      }
+      
+      li {
+        background-color: var(--color-surface-alt);
+        border-color: var(--color-border);
+      }
+      
+      .copyBtn {
+        background-color: var(--color-gray-700);
+        color: var(--color-gray-200);
+      }
+      
+      .copyBtn:hover {
+        background-color: var(--color-gray-600);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>API Settings</h2>
+    
+    <div class="input-group">
+      <input id="apiKeyInput" type="text" class="form-control" placeholder="Enter your API key">
+      <button id="addApiBtn" class="btn btn-primary">Add</button>
+    </div>
+
+    <h3>Translation Topics</h3>
+    <div class="translation-mode">
+      <div class="select-container">
+        <select id="translationMode" class="select">
+          <option value="">Select Topic</option>
+          <option value="tech">Technology & Computing</option>
+          <option value="medical">Medical & Health</option>
+          <option value="design">Design & Graphics</option>
+          <option value="business">Business & Economics</option>
+          <option value="science">Scientific & Academic</option>
+          <option value="legal">Legal & Documents</option>
+          <option value="literature">Literature & Arts</option>
+          <option value="general">General</option>
+        </select>
+        <div class="select-arrow">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+      <input type="text" id="customMode" class="custom-mode" placeholder="Additional topic description (optional)">
+    </div>
+
+    <h3>Registered Keys</h3>
+    <ul id="apiList" class="card"></ul>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>

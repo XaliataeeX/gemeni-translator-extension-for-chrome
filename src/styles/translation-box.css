@@ -1,0 +1,232 @@
+/* Translation Box Styles */
+.translation-box {
+  position: fixed;
+  width: 360px;
+  max-width: calc(100vw - 48px);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  font-family: var(--font-family-base);
+  z-index: 2147483647;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+  transition: all var(--transition-normal);
+  border: 1px solid var(--color-border);
+}
+
+.translation-box.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.translation-content {
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  max-height: 300px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--color-border);
+  scroll-behavior: smooth;
+}
+
+.translation-line {
+  margin: 6px 0;
+  transition: background-color var(--transition-fast);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-2xs) var(--spacing-xs);
+}
+
+.translation-line:hover {
+  background-color: rgba(0, 71, 171, 0.06); /* لاجوردی با شفافیت کم */
+}
+
+.translation-actions {
+  display: flex;
+  padding: var(--spacing-sm) var(--spacing-md);
+  gap: var(--spacing-sm);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.translation-actions button {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: transparent;
+  color: var(--color-primary-500); /* لاجوردی */
+}
+
+.translation-actions button:hover {
+  background: rgba(0, 71, 171, 0.06);
+}
+
+.translation-actions button:active {
+  transform: scale(0.96);
+}
+
+.close-btn {
+  padding: var(--spacing-2xs) !important;
+  font-size: var(--font-size-xl) !important;
+  margin-left: auto;
+  color: var(--color-text-tertiary) !important;
+  border-radius: var(--radius-full) !important;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  background: var(--color-surface-alt) !important;
+}
+
+/* Error notification */
+.translation-error-notification {
+  position: fixed;
+  bottom: var(--spacing-xl);
+  right: var(--spacing-xl);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--color-border);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  color: var(--color-error); /* زرشکی */
+  z-index: 2147483647;
+  animation: slideIn 0.3s var(--animation-timing);
+}
+
+/* Custom scrollbar */
+.translation-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.translation-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.translation-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 71, 171, 0.1); /* لاجوردی با شفافیت خیلی کم */
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.translation-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 71, 171, 0.2); /* لاجوردی با شفافیت کم */
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .translation-box {
+    background: rgba(28, 28, 30, 0.95);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-border);
+  }
+
+  .translation-content {
+    color: var(--color-text-primary);
+    border-bottom-color: var(--color-border);
+  }
+
+  .translation-line:hover {
+    background-color: rgba(0, 71, 171, 0.15); /* لاجوردی با شفافیت بیشتر برای دارک مود */
+  }
+
+  .translation-actions button {
+    color: var(--color-primary-500);
+  }
+
+  .translation-actions button:hover {
+    background: rgba(0, 71, 171, 0.15);
+  }
+
+  .close-btn {
+    color: var(--color-text-tertiary) !important;
+  }
+
+  .close-btn:hover {
+    background: var(--color-surface-alt) !important;
+  }
+
+  .translation-error-notification {
+    background: rgba(28, 28, 30, 0.95);
+    color: var(--color-error);
+    border: 1px solid var(--color-border);
+  }
+
+  .translation-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 71, 171, 0.2);
+  }
+
+  .translation-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 71, 171, 0.3);
+  }
+}
+
+/* RTL Support */
+[dir="rtl"] .translation-error-notification {
+  right: auto;
+  left: var(--spacing-xl);
+}
+
+[dir="rtl"] .close-btn {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* Loading States */
+.translation-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  color: var(--color-text-secondary);
+}
+
+.translation-loading .spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مترجم جمینای</title>
+  <link rel="stylesheet" href="popup-styles-new.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="d-flex align-items-center gap-sm">
+        <img src="icons/icon48.png" alt="Gemini Translator" width="32" height="32">
+        <h1 class="app-title">مترجم جمینای</h1>
+      </div>
+      <div class="d-flex align-items-center gap-xs">
+        <button id="helpBtn" class="btn btn-icon btn-ghost" aria-label="راهنما">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12" y2="17"></line>
+          </svg>
+        </button>
+        <button id="settingsBtn" class="btn btn-icon btn-ghost" aria-label="تنظیمات">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <div class="language-card animate-slide-in-up">
+        <div class="form-group">
+          <label for="targetLanguage" class="form-label">زبان مقصد</label>
+          <div class="search-container">
+            <input type="text" id="languageSearch" class="form-control" placeholder="جستجوی زبان..." />
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+          <div class="select-container mt-xs">
+            <select id="targetLanguage" class="select" dir="auto">
+              <optgroup label="زبان‌های پرکاربرد">
+                <option value="fa">فارسی</option>
+                <option value="en">English</option>
+                <option value="ar">العربية</option>
+                <option value="tr">Türkçe</option>
+              </optgroup>
+              <optgroup label="همه زبان‌ها" id="allLanguages">
+                <!-- Filled by JavaScript -->
+              </optgroup>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-card mt-md animate-slide-in-up">
+        <button id="translateBtn" class="btn btn-primary w-100">
+          ترجمه متن انتخاب شده
+          <kbd class="shortcut">Alt + T</kbd>
+        </button>
+      </div>
+
+      <div id="translationProgress" class="translation-progress mt-md d-none">
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-fill"></div>
+          </div>
+          <span class="progress-text">۰٪</span>
+        </div>
+        <button id="cancelTranslation" class="btn btn-sm btn-ghost">لغو</button>
+      </div>
+
+      <div id="statusCard" class="status-card mt-md d-none">
+        <div class="status-icon info rounded-full"></div>
+        <span id="statusText" class="status-text">در حال بارگذاری...</span>
+      </div>
+    </main>
+
+    <div id="settingsPanel" class="settings-panel">
+      <div class="settings-header d-flex align-items-center justify-content-between">
+        <h2 class="settings-title">تنظیمات</h2>
+        <button id="closeSettings" class="btn btn-icon btn-ghost" aria-label="Close settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="settings-content">
+        <div class="form-group">
+          <label for="apiKeyInput" class="form-label">کلید API</label>
+          <div class="d-flex gap-sm">
+            <input type="password" id="apiKeyInput" class="form-control" placeholder="کلید API Gemini خود را وارد کنید">
+            <button id="saveApiKeyBtn" class="btn btn-primary">ذخیره</button>
+          </div>
+          <p class="form-text">کلید API شما به صورت محلی ذخیره می‌شود و هرگز به اشتراک گذاشته نمی‌شود</p>
+        </div>
+
+        <div class="form-group mt-md">
+          <label for="translationMode" class="form-label">حالت ترجمه</label>
+          <div class="select-container">
+            <select id="translationMode" class="select">
+              <option value="general">ترجمه عمومی</option>
+              <option value="tech">فناوری و کامپیوتر</option>
+              <option value="medical">پزشکی و سلامت</option>
+              <option value="business">تجارت و اقتصاد</option>
+              <option value="science">علمی و دانشگاهی</option>
+              <option value="legal">حقوقی و اسناد</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group mt-md">
+          <label for="customInstructions" class="form-label">دستورالعمل‌های سفارشی</label>
+          <textarea id="customInstructions" class="form-control" rows="3" placeholder="دستورالعمل‌های خاص برای ترجمه (اختیاری)"></textarea>
+        </div>
+
+        <div class="form-group mt-md">
+          <label class="form-label">ظاهر</label>
+          <div class="d-flex gap-md mt-xs">
+            <div class="form-check">
+              <input type="radio" id="themeAuto" name="theme" value="auto" class="form-check-input" checked>
+              <label for="themeAuto" class="form-check-label">خودکار</label>
+            </div>
+            <div class="form-check">
+              <input type="radio" id="themeLight" name="theme" value="light" class="form-check-input">
+              <label for="themeLight" class="form-check-label">روشن</label>
+            </div>
+            <div class="form-check">
+              <input type="radio" id="themeDark" name="theme" value="dark" class="form-check-input">
+              <label for="themeDark" class="form-check-label">تاریک</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="helpPanel" class="help-panel">
+      <div class="settings-header d-flex align-items-center justify-content-between">
+        <h2 class="settings-title">راهنما</h2>
+        <button id="closeHelp" class="btn btn-icon btn-ghost" aria-label="Close help">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="settings-content">
+        <h3 class="mb-xs">میانبرهای صفحه کلید</h3>
+        <ul class="shortcut-list">
+          <li><kbd>Alt+T</kbd> <span>ترجمه متن انتخاب شده</span></li>
+          <li><kbd>Alt+Shift+T</kbd> <span>ترجمه و کپی به کلیپ‌بورد</span></li>
+          <li><kbd>Esc</kbd> <span>بستن پنجره ترجمه</span></li>
+        </ul>
+
+        <h3 class="mt-md mb-xs">نحوه استفاده</h3>
+        <ol class="help-list">
+          <li>کلید API Gemini خود را در بخش تنظیمات وارد کنید</li>
+          <li>زبان مقصد را برای ترجمه انتخاب کنید</li>
+          <li>متن مورد نظر را در هر صفحه وب انتخاب کنید</li>
+          <li>از میانبر ⌘T استفاده کنید یا دکمه ترجمه را کلیک کنید</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="popup-new.js"></script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Translator</title>
+  <link rel="stylesheet" href="popup-styles.css">
+</head>
+<body>
+  <div class="container animate-slide-in-up">
+    <header class="header">
+      <div class="header-brand">
+        <img src="icons/icon48.png" alt="Logo" class="logo">
+        <h1>Gemini Translator</h1>
+      </div>
+      <div class="header-actions">
+        <button id="settingsBtn" class="icon-button" aria-label="Settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="translation-card">
+        <div class="language-selector">
+          <label class="label">Translate to:</label>
+          <div class="select-wrapper">
+            <select id="targetLanguage" class="select">
+              <optgroup label="Common Languages">
+                <option value="fa" selected>فارسی</option>
+                <option value="en">English</option>
+                <option value="ar">العربية</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <div class="translation-direction">
+          <button id="swapDirectionBtn" class="swap-button" aria-label="Switch languages">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 16l-4-4m0 0l4-4m-4 4h18M17 8l4 4m0 0l-4 4m4-4H3"/>
+            </svg>
+          </button>
+          <span class="direction-text">English → Persian</span>
+        </div>
+
+        <button id="translateBtn" class="translate-button">
+          <span>Translate Selected Text</span>
+          <kbd class="shortcut">⌘T</kbd>
+        </button>
+      </section>
+
+      <div class="hint">
+        Select text and press ⌘T or click translate
+      </div>
+    </main>
+
+    <div id="settingsPanel" class="settings-panel">
+      <div class="settings-header">
+        <span>Settings</span>
+        <button class="close-button" id="closeSettings" aria-label="Close settings">×</button>
+      </div>
+      <div class="settings-content">
+        <div class="settings-group">
+          <label for="apiKeyInput" class="settings-label">API Key</label>
+          <div class="input-group">
+            <input type="password" id="apiKeyInput" class="form-control" placeholder="Enter your Gemini API key">
+            <button id="saveApiKeyBtn" class="btn btn-primary">Save</button>
+          </div>
+          <p class="settings-help">Your API key is stored locally and never shared</p>
+        </div>
+
+        <div class="settings-group">
+          <label for="translationMode" class="settings-label">Translation Mode</label>
+          <div class="select-container">
+            <select id="translationMode" class="select">
+              <option value="general">General Translation</option>
+              <option value="tech">Technology & Computing</option>
+              <option value="medical">Medical & Health</option>
+              <option value="business">Business & Economics</option>
+              <option value="science">Scientific & Academic</option>
+              <option value="legal">Legal & Documents</option>
+            </select>
+            <div class="select-arrow">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
