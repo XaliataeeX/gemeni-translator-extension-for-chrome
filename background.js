@@ -1,169 +1,192 @@
-const CONFIG = {
-  API_ENDPOINT: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-  STORAGE_KEYS: {
-    API_KEY: 'gemini_api_key',
-    SETTINGS: 'app_settings',
-  }
-};
+import TranslationService from './src/services/translation.js';
+import { getStorageKeys } from './src/utils/config.js';
+import { formatUserFriendlyMessage, createError, ErrorTypes } from './src/utils/error-handler.js';
+import { isRTLLanguage as utilIsRTLLanguage, getLanguageName as utilGetLanguageName } from './src/utils/languages.js';
+// Note: ErrorHandler from error-broadcaster.js is not directly used, adapting its logic instead.
 
-// بهبود مدیریت خطاها
-async function handleError(error, context) {
-  console.error(`[Translator Error] ${context}:`, error);
-  
-  // ارسال خطا به پاپ‌آپ
-  try {
-    // First try to send to active tab
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.id) {
-      // Check if content script is loaded before sending message
-      chrome.tabs.sendMessage(tab.id, { action: 'ping' }, response => {
-        if (chrome.runtime.lastError) {
-          console.log('Content script not ready in active tab:', chrome.runtime.lastError.message);
-          // Try to send to popup instead
-          sendErrorToPopup();
-          return;
-        }
-        
-        // Content script is loaded, send error message
-        chrome.tabs.sendMessage(tab.id, {
-          action: 'error',
-          error: error.message,
-          context
-        }, response => {
-          if (chrome.runtime.lastError) {
-            console.log('Error sending message to content script:', chrome.runtime.lastError.message);
-            // Try to send to popup instead
-            sendErrorToPopup();
-          }
-        });
-      });
-    } else {
-      // No active tab, try to send to popup
-      sendErrorToPopup();
-    }
-  } catch (e) {
-    console.error('Error in error handling process:', e);
-    // Try to send to popup as fallback
-    sendErrorToPopup();
+const translationService = TranslationService.getInstance();
+const storageKeys = getStorageKeys();
+
+async function handleAndBroadcastError(error, context) {
+  console.error(`[${context}] Raw Error:`, error);
+
+  let userFriendlyMessage;
+  if (error && error.type && error.message) { // Check if it's a structured error
+    userFriendlyMessage = formatUserFriendlyMessage(error);
+  } else {
+    const structuredError = createError(ErrorTypes.UNKNOWN_ERROR, error, error?.message);
+    userFriendlyMessage = formatUserFriendlyMessage(structuredError);
   }
   
-  // Helper function to send error to popup
-  function sendErrorToPopup() {
+  console.error(`[${context}] User-friendly message:`, userFriendlyMessage);
+
+  // Broadcasting logic (adapted from old handleError and sendErrorToPopup)
+  const sendErrorToUi = async (targetTabId = null) => {
+    if (targetTabId) {
+      try {
+        // Check if content script is loaded before sending message
+        await new Promise((resolve, reject) => {
+          chrome.tabs.sendMessage(targetTabId, { action: 'ping' }, response => {
+            if (chrome.runtime.lastError) {
+              console.log('Content script not ready in target tab:', chrome.runtime.lastError.message);
+              reject(new Error(chrome.runtime.lastError.message)); // Propagate error to try popup
+              return;
+            }
+            if (response && response.status === 'ok'){
+               chrome.tabs.sendMessage(targetTabId, {
+                action: 'error', // Or 'showError' as used in contextMenus
+                error: userFriendlyMessage,
+                context
+              }, response => {
+                if (chrome.runtime.lastError) {
+                  console.log('Error sending message to content script:', chrome.runtime.lastError.message);
+                  // Potentially try popup as fallback if this specific send fails
+                }
+              });
+              resolve();
+            } else {
+               reject(new Error('Ping failed or no response'));
+            }
+          });
+        });
+      } catch (e) {
+        // If sending to tab fails, try sending to popup
+        sendErrorToPopupOnly();
+      }
+    } else {
+      sendErrorToPopupOnly();
+    }
+  };
+
+  const sendErrorToPopupOnly = () => {
     try {
       chrome.runtime.sendMessage({
         action: 'error',
-        error: error?.message || 'Unknown error',
+        error: userFriendlyMessage,
         context
       }, response => {
         if (chrome.runtime.lastError) {
-          console.log('No active popup connection available:', chrome.runtime.lastError.message);
+          console.log('No active popup connection available for error broadcast:', chrome.runtime.lastError.message);
         }
       });
     } catch (e) {
-      console.log('Error sending message to popup:', e);
+      console.log('Error sending message to popup for error broadcast:', e);
     }
-  }
-}
+  };
 
-// اضافه کردن سیستم لاگینگ
-function logError(error, context = '') {
-  console.error(`[Translator Error] ${context}:`, error);
-  // ارسال خطا به پنجره پاپ‌آپ
+  // Try to send to active tab first, then fallback to popup
   try {
-    chrome.runtime.sendMessage({
-      action: 'error',
-      error: error?.message || 'Unknown error',
-      context
-    }, response => {
-      if (chrome.runtime.lastError) {
-        // Silently catch connection errors
-        console.log('No active popup connection available:', chrome.runtime.lastError);
-      }
-    });
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id) {
+      sendErrorToUi(tab.id);
+    } else {
+      sendErrorToPopupOnly();
+    }
   } catch (e) {
-    console.log('Error sending message to popup:', e);
+    console.error('Error in handleAndBroadcastError process:', e);
+    sendErrorToPopupOnly(); // Fallback
   }
 }
 
-// دریافت API key از storage
-async function getApiKey() {
-  const result = await chrome.storage.local.get(CONFIG.STORAGE_KEYS.API_KEY);
-  return result[CONFIG.STORAGE_KEYS.API_KEY];
-}
 
-// بهبود تابع بررسی API key
-async function checkAPIKey() {
-  const apiKey = await getApiKey();
-  
-  if (!apiKey) {
-    // باز کردن صفحه تنظیمات در صورت نبود API key
-    await chrome.tabs.create({ url: 'options.html' });
-    throw new Error('Please enter your API key in settings');
+// Function to inject content scripts into a tab
+async function injectContentScripts(tabId) {
+  try {
+    console.log(`Injecting content script into tab ${tabId}...`);
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['content.js']
+    });
+    await chrome.scripting.insertCSS({
+      target: { tabId },
+      files: ['content-styles.css']
+    });
+    console.log(`Content script injection successful for tab ${tabId}`);
+  } catch (err) {
+    console.error(`Content script injection failed for tab ${tabId}:`, err);
+    // Rethrow the error if you want ensureContentScriptLoaded to handle it
+    // or manage specific UI feedback from here if needed.
+    throw err; 
   }
-  
-  return apiKey;
 }
 
-// اضافه کردن این تابع جدید در بالای فایل
+// Ensures content script is loaded in a tab, injecting it if necessary.
 async function ensureContentScriptLoaded(tabId) {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => { // Made the promise callback async
     // First check if content script is already loaded
-    chrome.tabs.sendMessage(tabId, { action: 'ping' }, response => {
-      if (chrome.runtime.lastError) {
-        console.log('Content script not loaded, attempting to inject:', chrome.runtime.lastError.message);
-        // Content script not loaded, inject it
-        injectContentScript();
-      } else if (response && response.status === 'ok') {
-        console.log('Content script already loaded');
+    try {
+      const response = await new Promise((pingResolve, pingReject) => {
+        chrome.tabs.sendMessage(tabId, { action: 'ping' }, (res) => {
+          if (chrome.runtime.lastError) {
+            pingReject(new Error(chrome.runtime.lastError.message));
+          } else {
+            pingResolve(res);
+          }
+        });
+      });
+
+      if (response && response.status === 'ok') {
+        console.log(`Content script already loaded in tab ${tabId}`);
         resolve(true);
         return;
       }
-    });
+    } catch (e) {
+      console.log(`Content script not loaded in tab ${tabId} (or ping failed), attempting to inject:`, e.message);
+      // Content script not loaded, or another issue with pinging, proceed to inject.
+    }
     
-    // Function to inject content script
-    const injectContentScript = async () => {
-      try {
-        console.log('Injecting content script...');
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          files: ['content.js']
-        });
-        await chrome.scripting.insertCSS({
-          target: { tabId },
-          files: ['content-styles.css']
-        });
-        console.log('Content script injection successful');
-      } catch (err) {
-        console.error('Content script injection failed:', err);
-      }
-    };
-    
-    // Set up interval to check if content script is loaded
-    const checkInterval = setInterval(() => {
-      chrome.tabs.sendMessage(tabId, { action: 'ping' }, response => {
-        if (chrome.runtime.lastError) {
-          console.log('Content script still not loaded, retrying...');
-          // Try to inject again
-          injectContentScript();
-        } else if (response && response.status === 'ok') {
-          console.log('Content script loaded successfully');
-          clearInterval(checkInterval);
-          clearTimeout(timeoutId);
-          resolve(true);
-        }
-      });
-    }, 500);
-
-    // Set timeout to prevent infinite waiting
-    const timeoutId = setTimeout(() => {
-      clearInterval(checkInterval);
-      console.error('Content script loading timed out after 5 seconds');
+    try {
+      await injectContentScripts(tabId);
+    } catch (injectionError) {
+       // Initial injection failed, don't start polling, resolve false.
+      console.error(`Initial injection failed for tab ${tabId}, not starting poller.`, injectionError);
       resolve(false);
-    }, 5000);
+      return;
+    }
+    
+    // Set up interval to check if content script is loaded after initial injection attempt
+    let attempts = 0;
+    const maxAttempts = 10; // Max 5 seconds (10 attempts * 500ms)
+    const checkInterval = setInterval(async () => {
+      attempts++;
+      try {
+        const response = await new Promise((pingResolve, pingReject) => {
+          chrome.tabs.sendMessage(tabId, { action: 'ping' }, (res) => {
+            if (chrome.runtime.lastError) {
+              pingReject(new Error(chrome.runtime.lastError.message));
+            } else {
+              pingResolve(res);
+            }
+          });
+        });
+
+        if (response && response.status === 'ok') {
+          console.log(`Content script loaded successfully in tab ${tabId} after ${attempts} attempts.`);
+          clearInterval(checkInterval);
+          resolve(true);
+        } else if (attempts >= maxAttempts) {
+          console.error(`Content script loading timed out for tab ${tabId} after ${attempts} attempts.`);
+          clearInterval(checkInterval);
+          resolve(false);
+        }
+      } catch (e) {
+        console.log(`Content script still not loaded in tab ${tabId} (attempt ${attempts}), retrying injection...`, e.message);
+        if (attempts < maxAttempts) {
+          try {
+            await injectContentScripts(tabId); // Try to inject again
+          } catch (retryInjectionError) {
+            console.error(`Retry injection failed for tab ${tabId}, attempt ${attempts}.`, retryInjectionError);
+            // Continue polling, maybe it will connect eventually or other instance injected.
+          }
+        } else {
+           console.error(`Content script loading timed out for tab ${tabId} after ${attempts} attempts (last try was injection).`);
+           clearInterval(checkInterval);
+           resolve(false);
+        }
+      }
+    }, 500);
   });
 }
-
-// حذف توابع مربوط به کش
 
 // اضافه کردن تابع تشخیص زبان
 function detectLanguage(text) {
@@ -178,162 +201,17 @@ function detectLanguage(text) {
   });
 }
 
-// Define language utilities directly instead of using dynamic import
-// This avoids the ServiceWorker import() restriction
-const languageUtils = {
-  // RTL languages list
-  rtlLanguages: ['ar', 'fa', 'he', 'ur', 'yi', 'ku', 'ps', 'sd', 'ug'],
-  
-  // Basic language mapping for fallback
-  languageMap: {
-    'fa': 'Persian',
-    'ar': 'Arabic',
-    'en': 'English',
-    'fr': 'French',
-    'de': 'German',
-    'es': 'Spanish',
-    'zh': 'Chinese',
-    'ru': 'Russian',
-    'ja': 'Japanese',
-    'ko': 'Korean',
-    'tr': 'Turkish',
-    'it': 'Italian',
-    'pt': 'Portuguese',
-    'nl': 'Dutch',
-    'pl': 'Polish',
-    'sv': 'Swedish',
-    'he': 'Hebrew',
-    'hi': 'Hindi',
-    'ur': 'Urdu'
-  },
-  
-  // Check if a language is RTL
-  isRTLLanguage: function(langCode) {
-    return this.rtlLanguages.includes(langCode);
-  },
-  
-  // Get language name
-  getLanguageName: function(langCode, useNative = true) {
-    // Since we can't access the full language data in the background script,
-    // we'll just return the English name from our basic mapping
-    return this.languageMap[langCode] || langCode;
-  }
-};
-
-// Helper function to determine if a language is RTL
-function isRTLLanguage(langCode) {
-  return languageUtils.isRTLLanguage(langCode);
-}
-
-// Function to get language name for prompt
-function getTargetLanguagePrompt(langCode) {
-  try {
-    // Get the English name of the language
-    return languageUtils.getLanguageName(langCode, false);
-  } catch (error) {
-    console.error('Error getting language name:', error);
-    // Fallback to basic mapping
-    return languageUtils.languageMap[langCode] || langCode;
-  }
-}
-
 // اضافه کردن متغیر برای زبان پیش‌فرض
 let userPrefLang = 'fa'; // پیش‌فرض فارسی
 
 // تابع جدید برای دریافت زبان مقصد
 async function getTargetLanguage() {
   try {
-    const result = await chrome.storage.local.get('targetLanguage');
-    return result.targetLanguage || userPrefLang;
+    const result = await chrome.storage.local.get(storageKeys.TARGET_LANGUAGE);
+    return result[storageKeys.TARGET_LANGUAGE] || userPrefLang;
   } catch (error) {
     console.error('Error getting target language:', error);
     return userPrefLang;
-  }
-}
-
-// بهبود تابع ترجمه با پشتیبانی از تمام زبان‌های گوگل ترنسلیت
-async function translateText(text, targetLang = null) {
-  try {
-    // Check if text is valid
-    if (!text || typeof text !== 'string' || text.trim() === '') {
-      throw new Error('Invalid text for translation');
-    }
-    
-    const apiKey = await checkAPIKey();
-    if (!apiKey) throw new Error('API key not found');
-
-    const detectedLang = await detectLanguage(text);
-    const userPrefLang = await getTargetLanguage(); // دریافت زبان هدف
-    const targetLanguage = await getTargetLanguagePrompt(targetLang || userPrefLang);
-
-    const prompt = `Translate the following text from ${detectedLang} to ${targetLanguage}:\n${text}`;
-
-    // اضافه کردن retry mechanism
-    let retries = 3;
-    while (retries > 0) {
-      try {
-        const response = await fetch(`${CONFIG.API_ENDPOINT}?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `[system: You are a translator. Translate exactly as provided to the target language, no extra comments.]\n${prompt}`
-              }]
-            }],
-            generationConfig: {
-              temperature: 0.1,  // Slightly increased for better fluency
-              topP: 0.8,        // Adjusted for better translation quality
-              topK: 40,         // Increased for more diverse outputs
-              maxOutputTokens: 2048  // Increased for longer translations
-            },
-            safetySettings: [
-              {
-                category: "HARM_CATEGORY_HARASSMENT",
-                threshold: "BLOCK_NONE"
-              },
-              {
-                category: "HARM_CATEGORY_HATE_SPEECH",
-                threshold: "BLOCK_NONE"
-              }
-            ]
-          })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          // بررسی خطای rate limit
-          if (response.status === 429) {
-            retries--;
-            if (retries > 0) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              continue;
-            }
-          }
-          throw new Error(errorData?.error?.message || 'API Error');
-        }
-
-        const data = await response.json();
-        const targetLangCode = targetLang || userPrefLang;
-        const isRTL = await isRTLLanguage(targetLangCode);
-        return {
-          text: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
-          sourceLang: detectedLang,
-          targetLang: targetLangCode,
-          isRTL: isRTL
-        };
-      } catch (error) {
-        if (retries <= 1) throw error;
-        retries--;
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-  } catch (error) {
-    logError(error, 'Translation');
-    throw error;
   }
 }
 
@@ -361,134 +239,11 @@ async function detectTextContext(text) {
   return ''; // اگر موضوع خاصی تشخیص داده نشد
 }
 
-// ترجمه دسته‌ای برای ترجمه کل صفحه
-async function translateBatch(texts, isRTL = true) {
-  const results = [];
-  const apiKey = await getApiKey();
-  
-  if (!apiKey) throw new Error('Please enter your API key in settings');
-  
-  // تقسیم متن‌ها به دسته‌های کوچکتر برای جلوگیری از خطای محدودیت API
-  const batchSize = 5; // کاهش اندازه دسته برای کاهش فشار بر API
-  const batches = [];
-  
-  for (let i = 0; i < texts.length; i += batchSize) {
-    batches.push(texts.slice(i, i + batchSize));
-  }
-  
-  // ترجمه هر دسته با تأخیر بین درخواست‌ها
-  for (let i = 0; i < batches.length; i++) {
-    const batch = batches[i];
-    try {
-      // ترکیب متن‌ها با جداکننده مشخص
-      const combinedText = batch.join('\n---SEPARATOR---\n');
-      const translationDirection = isRTL ? 'to_persian' : 'to_english';
-      
-      // اضافه کردن اطلاعات موضوع ترجمه
-      const translationMode = await getTranslationMode();
-      let contextPrompt = '';
-      
-      if (translationMode?.mode) {
-        contextPrompt = `Consider this is a ${translationMode.mode} text. `;
-        if (translationMode.custom) {
-          contextPrompt += translationMode.custom + '. ';
-        }
-      }
-      
-      const prompt = translationDirection === 'to_english' 
-        ? `${contextPrompt}Translate each of the following texts to English. Keep each text separate:\n${combinedText}`
-        : `${contextPrompt}Translate each of the following texts to Persian. Keep each text separate:\n${combinedText}`;
-
-      // تلاش مجدد در صورت خطا
-      let retries = 3;
-      let success = false;
-      let translatedBatch = [];
-      
-      while (retries > 0 && !success) {
-        try {
-          const response = await fetch(`${CONFIG.API_ENDPOINT}?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{
-                  text: `[system: You are a translator. Translate exactly as provided, maintain the separator between texts.]\n${prompt}`
-                }]
-              }],
-              generationConfig: {
-                temperature: 0.1,
-                topP: 0.8,
-                topK: 40,
-                maxOutputTokens: 4096  // Increased for batch translations
-              },
-              safetySettings: [
-                {
-                  category: "HARM_CATEGORY_HARASSMENT",
-                  threshold: "BLOCK_NONE"
-                },
-                {
-                  category: "HARM_CATEGORY_HATE_SPEECH",
-                  threshold: "BLOCK_NONE"
-                }
-              ]
-            })
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            // اگر خطای محدودیت منابع بود، تلاش مجدد با تأخیر
-            if (errorData?.error?.message?.includes('Resource has been exhausted')) {
-              retries--;
-              // تأخیر قبل از تلاش مجدد (افزایش تصاعدی)
-              await new Promise(resolve => setTimeout(resolve, (3 - retries) * 1000));
-              continue;
-            }
-            throw new Error(`خطای API: ${errorData?.error?.message || response.status}`);
-          }
-
-          const data = await response.json();
-          const translatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-          if (!translatedText) throw new Error('پاسخ API نامعتبر است');
-
-          // تقسیم نتیجه به متن‌های جداگانه
-          translatedBatch = translatedText.split('---SEPARATOR---').map(text => text.trim());
-          success = true;
-        } catch (error) {
-          if (retries <= 1) throw error;
-          retries--;
-          // تأخیر قبل از تلاش مجدد (افزایش تصاعدی)
-          await new Promise(resolve => setTimeout(resolve, (3 - retries) * 1000));
-        }
-      }
-      
-      // اضافه کردن نتایج به آرایه اصلی
-      if (Array.isArray(translatedBatch) && translatedBatch.length > 0) {
-        results.push(...translatedBatch);
-      } else {
-        // اگر ترجمه موفق نبود، متن اصلی را اضافه کنیم
-        results.push(...batch);
-      }
-      
-      // تأخیر بین درخواست‌ها برای جلوگیری از محدودیت نرخ API
-      if (i < batches.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    } catch (error) {
-      console.error('Batch translation error:', error);
-      // در صورت خطا، متن اصلی را برگردانیم
-      results.push(...batch);
-    }
-  }
-  
-  return results;
-}
-
 // دریافت تنظیمات موضوع ترجمه
 async function getTranslationMode() {
   try {
-    const result = await chrome.storage.local.get('translation_mode');
-    return result.translation_mode || null;
+    const result = await chrome.storage.local.get(storageKeys.TRANSLATION_MODE);
+    return result[storageKeys.TRANSLATION_MODE] || null;
   } catch (error) {
     console.error('Error getting translation mode:', error);
     return null;
@@ -498,8 +253,8 @@ async function getTranslationMode() {
 // ذخیره در تاریخچه
 async function addToHistory(original, translated) {
   try {
-    const history = await chrome.storage.local.get('translation_history');
-    const translationHistory = history.translation_history || [];
+    const historyResult = await chrome.storage.local.get(storageKeys.HISTORY);
+    const translationHistory = historyResult[storageKeys.HISTORY] || [];
     
     // اضافه کردن به ابتدای آرایه
     translationHistory.unshift({
@@ -513,7 +268,7 @@ async function addToHistory(original, translated) {
       translationHistory.length = 50;
     }
     
-    await chrome.storage.local.set({ translation_history: translationHistory });
+    await chrome.storage.local.set({ [storageKeys.HISTORY]: translationHistory });
     
     // ارسال پیام به پاپ‌آپ برای به‌روزرسانی تاریخچه
     try {
@@ -583,16 +338,17 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         throw new Error('No text selected for translation');
       }
       
-      const translation = await translateText(text);
-      if (!translation || !translation.text) {
+      // Use TranslationService for context menu translation
+      const translationResult = await translationService.translate(text);
+      if (!translationResult || !translationResult.text) {
         throw new Error('Translation failed');
       }
       
       try {
         await chrome.tabs.sendMessage(tab.id, {
           action: 'translateSelection',
-          translatedText: translation.text,
-          isRTL: translation.isRTL
+          translatedText: translationResult.text,
+          isRTL: utilIsRTLLanguage(translationResult.targetLang || userPrefLang) // Updated call
         });
       } catch (err) {
         console.error('Error sending translation to content script:', err);
@@ -605,14 +361,21 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           action: 'translatePage'
         });
       } catch (err) {
-        console.error('Error sending page translation request:', err);
-        throw new Error('خطا در ترجمه صفحه');
+        // If sending 'translatePage' fails, it's an operational error.
+        // Create a structured error to pass to handleAndBroadcastError.
+        const structuredError = createError(ErrorTypes.UNKNOWN_ERROR, err, 'Failed to send translatePage request to content script.');
+        await handleAndBroadcastError(structuredError, 'Context menu - translatePage send');
+        // No need to throw further, error is handled.
       }
     }
-  } catch (error) {
-    await handleError(error, 'Context menu action');
+  } catch (error) { // Catches errors from translateText logic or ensureContentScriptLoaded
+    await handleAndBroadcastError(error, 'Context menu action');
     
+    // The showError logic below is now part of handleAndBroadcastError's responsibility
+    // So, this specific block can be removed or simplified if handleAndBroadcastError
+    // already does exactly this. For now, let's assume handleAndBroadcastError covers it.
     // نمایش خطا به کاربر از طریق content script
+    /*
     try {
       // Check if tab still exists before sending message
       const tabExists = await chrome.tabs.get(tab.id).catch(() => null);
@@ -648,76 +411,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     } catch (e) {
       console.error('Failed to show error to user:', e);
     }
+    */
   }
 });
 
-// اصلاح message listener
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message || !message.action) {
-    console.error('Invalid message received');
-    return false;
-  }
-  
-  console.log('Received message:', message.action);
-  
-  if (message.action === 'translate') {
-    translateText(message.text, message.targetLang)
-      .then(translation => {
-        try {
-          // Use a safer way to check if we can still send a response
-          if (chrome.runtime.id) { // Check if extension is still running
-            sendResponse({ success: true, translatedText: translation.text, isRTL: translation.isRTL });
-          }
-        } catch (error) {
-          console.log('Channel closed, ignoring response:', error);
-        }
-      })
-      .catch(error => {
-        try {
-          // Use a safer way to check if we can still send a response
-          if (chrome.runtime.id) { // Check if extension is still running
-            sendResponse({ success: false, error: error.message });
-          }
-        } catch (error) {
-          console.log('Channel closed, ignoring response:', error);
-        }
-      });
-
-    return true; // Will respond asynchronously
-  }
-  
-  if (message.action === 'translateBatch') {
-    translateBatch(message.texts, message.isRTL)
-      .then(translations => {
-        if (chrome.runtime.lastError) {
-          console.error('Error sending response:', chrome.runtime.lastError);
-          return;
-        }
-        try {
-          sendResponse({ success: true, translations });
-        } catch (error) {
-          console.log('Channel closed, ignoring response');
-        }
-      })
-      .catch(error => {
-        if (chrome.runtime.lastError) {
-          console.error('Error sending response:', chrome.runtime.lastError);
-          return;
-        }
-        try {
-          sendResponse({ success: false, error: error.message });
-        } catch (error) {
-          console.log('Channel closed, ignoring response');
-        }
-      });
-
-    return true; // Will respond asynchronously
-  }
-
-  return false; // Will not respond
-});
-
-// مدیریت پیام‌ها با تایم‌اوت و بررسی خطا - این لیسنر جایگزین لیسنر قبلی می‌شود
+// مدیریت پیام‌ها با تایم‌اوت و بررسی خطا 
+// This listener handles messages from popup and content scripts.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !message.action) {
     console.error('Invalid message received');
@@ -734,7 +433,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.action === 'translate') {
     // استفاده از Promise.race برای تعیین مهلت زمانی
-    const translationPromise = translateText(message.text, message.targetLang || message.forceDirection);
+    const translationPromise = translationService.translate(message.text, message.targetLang || message.forceDirection);
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('عملیات ترجمه با تایم‌اوت مواجه شد')), 30000);
     });
@@ -746,19 +445,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           if (chrome.runtime.id) { // Check if extension is still running
             sendResponse({ 
               success: true, 
-              translatedText: translation.text, 
-              isRTL: translation.isRTL 
+              translatedText: translation.text,
+              // Assuming translation object from service now includes targetLang
+              isRTL: utilIsRTLLanguage(translation.targetLang || message.targetLang || userPrefLang) // Updated call
             });
           }
         } catch (e) {
           console.log('Channel closed before response could be sent:', e);
         }
       })
-      .catch(error => {
+      .catch(error => { // This error is from translationService.translate or the timeout
+        handleAndBroadcastError(error, 'Translate action');
         try {
           // Use a safer way to check if we can still send a response
           if (chrome.runtime.id) { // Check if extension is still running
-            sendResponse({ success: false, error: error.message });
+            // Send the formatted user-friendly message to the caller (e.g., popup)
+            const userFriendlyMessage = (error.type && error.message) ? formatUserFriendlyMessage(error) : formatUserFriendlyMessage(createError(ErrorTypes.UNKNOWN_ERROR, error, error?.message));
+            sendResponse({ success: false, error: userFriendlyMessage });
           }
         } catch (e) {
           console.log('Channel closed before error could be sent:', e);
@@ -768,26 +471,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Will respond asynchronously
   }
   
+  // Note: translateBatch logic was removed in a previous refactoring,
+  // calls to translationService.translate are made individually.
+  // If translateBatch messages are still expected, this part needs adjustment.
+  // For now, assuming individual 'translate' calls cover batch needs from UI.
   if (message.action === 'translateBatch') {
-    translateBatch(message.texts, message.isRTL)
-      .then(translations => {
+    const translations = [];
+    const promises = message.texts.map(text => 
+      translationService.translate(text, message.targetLang || message.forceDirection)
+        .then(result => translations.push(result.text))
+        .catch(error => { // Error for an individual translation in batch
+          handleAndBroadcastError(error, 'TranslateBatch action - individual translation');
+          translations.push(text); // Push original text in case of error
+        })
+    );
+
+    Promise.all(promises)
+      .then(() => {
         try {
           // Use a safer way to check if we can still send a response
           if (chrome.runtime.id) { // Check if extension is still running
             sendResponse({ success: true, translations });
           }
-        } catch (error) {
-          console.log('Channel closed, ignoring response:', error);
+        } catch (error) { // Error sending the successful response
+          console.log('Channel closed, ignoring response for successful batch translation:', error);
         }
       })
-      .catch(error => {
+      .catch(error => { // This catch is for Promise.all itself, if something unexpected happens with it
+        handleAndBroadcastError(error, 'TranslateBatch action - Promise.all');
         try {
           // Use a safer way to check if we can still send a response
           if (chrome.runtime.id) { // Check if extension is still running
-            sendResponse({ success: false, error: error.message });
+            const userFriendlyMessage = (error.type && error.message) ? formatUserFriendlyMessage(error) : formatUserFriendlyMessage(createError(ErrorTypes.UNKNOWN_ERROR, error, error?.message));
+            sendResponse({ success: false, error: userFriendlyMessage, translations: message.texts }); // send original texts back
           }
-        } catch (error) {
-          console.log('Channel closed, ignoring response:', error);
+        } catch (e) {
+          console.log('Channel closed before batch error could be sent:', e);
         }
       });
 
@@ -795,9 +514,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   return false; // Will not respond
-}); // این لیسنر جایگزین لیسنر قبلی می‌شود
+});
 
 // اضافه کردن event listener برای خطاهای uncaught
-chrome.runtime.onInstalled.addListener(() => {
-  console.log('Extension installed/updated');
-});
+// Note: onInstalled listener was duplicated, removing one instance.
+// chrome.runtime.onInstalled.addListener(() => {
+//   console.log('Extension installed/updated');
+// });

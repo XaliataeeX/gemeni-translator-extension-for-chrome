@@ -1,8 +1,10 @@
+import { getApiConfig, getStorageKeys } from '../utils/config.js';
 import { rateLimiter, sanitizeInput, validateApiKey } from '../utils/security';
 import { ErrorTypes, createError, retry } from '../utils/error-handler';
 import { isRTLLanguage } from '../utils/languages';
 
 // Cache implementation
+// TODO: Get these from configManager as well
 const CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
 const CACHE_MAX_SIZE = 100;
 
@@ -77,38 +79,35 @@ const performance = {
 };
 
 // Export functionality
-export async function translateText(text, targetLang, useCache = true) {
-  const perfId = Date.now();
-  performance.startTimer(perfId);
+// export async function translateText(text, targetLang, useCache = true) {
+//   const perfId = Date.now();
+//   performance.startTimer(perfId);
   
-  try {
-    if (useCache) {
-      const cached = translationCache.get(text, targetLang);
-      if (cached) {
-        performance.endTimer(perfId);
-        return cached;
-      }
-    }
+//   try {
+//     if (useCache) {
+//       const cached = translationCache.get(text, targetLang);
+//       if (cached) {
+//         performance.endTimer(perfId);
+//         return cached;
+//       }
+//     }
     
-    const result = await chrome.runtime.sendMessage({
-      action: 'translate',
-      text,
-      targetLang
-    });
+//     const result = await chrome.runtime.sendMessage({
+//       action: 'translate',
+//       text,
+//       targetLang
+//     });
     
-    if (result.success && useCache) {
-      translationCache.set(text, targetLang, result.translation);
-    }
+//     if (result.success && useCache) {
+//       translationCache.set(text, targetLang, result.translation);
+//     }
     
-    performance.endTimer(perfId);
-    return result.translation;
+//     performance.endTimer(perfId);
+//     return result.translation;
     
-  } catch (error) {
-    performance.endTimer(perfId);
-    throw error;
-  }
-}
-
+//   } catch (error) {
+//     performance.endTimer(perfId);
+//     throw error;
 export class TranslationService {
   static instance = null;
   
@@ -120,8 +119,13 @@ export class TranslationService {
   }
 
   constructor() {
-    this.API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+    this.API_ENDPOINT = getApiConfig().endpoint;
     this.clientId = crypto.randomUUID();
+    const storageKeys = getStorageKeys();
+    this.apiKeyStorageKey = storageKeys.API_KEY;
+    this.targetLangStorageKey = storageKeys.TARGET_LANGUAGE;
+    // Consider if defaultLanguage should come from ui config
+    this.defaultTargetLanguage = 'fa'; 
   }
 
   async translate(text, targetLang = null) {
@@ -226,8 +230,8 @@ export class TranslationService {
   }
 
   async getApiKey() {
-    const result = await chrome.storage.local.get('gemini_api_key');
-    const apiKey = result.gemini_api_key;
+    const result = await chrome.storage.local.get(this.apiKeyStorageKey);
+    const apiKey = result[this.apiKeyStorageKey];
 
     if (!apiKey || !validateApiKey(apiKey)) {
       throw createError(ErrorTypes.API_KEY_MISSING);
@@ -237,7 +241,9 @@ export class TranslationService {
   }
 
   async getTargetLanguage() {
-    const result = await chrome.storage.local.get('target_language');
-    return result.target_language || 'fa';
+    const result = await chrome.storage.local.get(this.targetLangStorageKey);
+    return result[this.targetLangStorageKey] || this.defaultTargetLanguage;
   }
 }
+
+export default TranslationService;

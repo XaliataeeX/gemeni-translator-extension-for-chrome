@@ -17,6 +17,16 @@ export class ConfigManager {
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         enabled: true
       },
+      storageKeys: {
+        API_KEY: 'gemini_api_key',
+        TARGET_LANGUAGE: 'target_language',
+        SOURCE_LANGUAGE: 'source_language',
+        TRANSLATION_MODE: 'translation_mode',
+        CUSTOM_INSTRUCTIONS: 'custom_instructions',
+        THEME: 'app_theme',
+        HISTORY: 'translation_history',
+        APP_CONFIG: 'app_config'
+      },
       performance: {
         thresholds: {
           translation: 5000,
@@ -95,5 +105,6 @@ chrome.runtime.onInstalled.addListener(() => {
 // Export common configuration getters
 export const getApiConfig = () => configManager.get('api');
 export const getCacheConfig = () => configManager.get('cache');
+export const getStorageKeys = () => configManager.get('storageKeys');
 export const getPerformanceConfig = () => configManager.get('performance');
 export const getUIConfig = () => configManager.get('ui');

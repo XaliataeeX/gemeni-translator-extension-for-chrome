@@ -1,9 +1,12 @@
+import { getStorageKeys } from './src/utils/config.js';
+
 document.addEventListener('DOMContentLoaded', () => {
+  const storageKeys = getStorageKeys();
   // حذف تنظیمات مربوط به auto-translate
   const apiInput = document.getElementById('apiKeyInput');
   const addBtn = document.getElementById('addApiBtn');
   const apiList = document.getElementById('apiList');
-  const STATUS_KEY = 'gemini_api_key';
+  const STATUS_KEY = storageKeys.API_KEY; // Updated
 
   const modeSelect = document.getElementById('translationMode');
   const customMode = document.getElementById('customMode');
@@ -49,10 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // ذخیره در chrome.storage
       await chrome.storage.local.set({ [STATUS_KEY]: newKey });
       
-      // ذخیره در تنظیمات برنامه
-      await chrome.storage.local.set({ 
-        'app_settings': { apiKey: newKey }
-      });
+      // ذخیره در تنظیمات برنامه - Removed as per instruction
+      // await chrome.storage.local.set({ 
+      //   [storageKeys.APP_CONFIG]: { apiKey: newKey } // Assuming APP_CONFIG is the key for app_settings
+      // });
       
       showStatus('API key saved successfully');
       await loadApiKey();
@@ -66,9 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
   async function deleteApiKey() {
     try {
       await chrome.storage.local.remove([STATUS_KEY]);
-      await chrome.storage.local.set({ 
-        'app_settings': { apiKey: '' }
-      });
+      // await chrome.storage.local.set({ 
+      //  [storageKeys.APP_CONFIG]: { apiKey: '' } // Assuming APP_CONFIG is the key for app_settings
+      // }); // Removed
       showStatus('API key deleted successfully');
       await loadApiKey();
     } catch (error) {
@@ -83,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const customText = customMode.value.trim();
     
     await chrome.storage.local.set({
-      translation_mode: {
+      [storageKeys.TRANSLATION_MODE]: { // Updated
         mode: mode,
         custom: customText
       }
@@ -94,10 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // بارگذاری تنظیمات موضوع
   async function loadTranslationMode() {
-    const result = await chrome.storage.local.get('translation_mode');
-    if (result.translation_mode) {
-      modeSelect.value = result.translation_mode.mode;
-      customMode.value = result.translation_mode.custom || '';
+    const result = await chrome.storage.local.get(storageKeys.TRANSLATION_MODE); // Updated
+    if (result[storageKeys.TRANSLATION_MODE]) {
+      modeSelect.value = result[storageKeys.TRANSLATION_MODE].mode;
+      customMode.value = result[storageKeys.TRANSLATION_MODE].custom || '';
     }
   }
 
