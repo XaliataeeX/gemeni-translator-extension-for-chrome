@@ -76,11 +76,17 @@
     }
   }
 
+  function handleKeydown(e) {
+    if (e.key === 'Escape' && currentBox) {
+      removeBox();
+    }
+  }
+
   function showTranslationBox(originalText, translatedText, rect, isRTL = true) {
     try {
       console.log('Showing translation box:', { originalText, translatedText, isRTL }); // Debug log
       
-      if (currentBox) currentBox.remove();
+      if (currentBox) currentBox.remove(); // This will also remove old keydown listener via removeBox()
 
       const box = document.createElement('div');
       box.className = 'translation-box';
@@ -114,7 +120,7 @@
 
     } catch (error) {
       console.error('Error showing translation box:', error);
-      showErrorNotification('Error displaying translation');
+      showErrorNotification(error.message || 'Error displaying translation');
     }
   }
 
@@ -182,6 +188,7 @@
     }
 
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeydown);
   }
 
   function processText(text, originalText = '') {
@@ -231,6 +238,7 @@
           currentBox = null;
         }
         document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('keydown', handleKeydown);
       }, 200);
     }
   }

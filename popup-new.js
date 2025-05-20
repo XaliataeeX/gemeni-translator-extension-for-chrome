@@ -7,6 +7,7 @@
 // Import language utilities
 import { languages, getSupportedLanguages, getLanguageDirection } from './src/utils/languages.js';
 import { TranslationProgress } from './src/utils/progress.js';
+import { getStorageKeys } from './src/utils/config.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
@@ -28,16 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const themeRadios = document.querySelectorAll('input[name="theme"]');
   const allLanguagesGroup = document.getElementById('allLanguages');
   const languageSearchInput = document.getElementById('languageSearch');
-
-  // Constants
-  const STORAGE_KEYS = {
-    API_KEY: 'gemini_api_key',
-    TARGET_LANGUAGE: 'target_language',
-    SOURCE_LANGUAGE: 'source_language',
-    TRANSLATION_MODE: 'translation_mode',
-    CUSTOM_INSTRUCTIONS: 'custom_instructions',
-    THEME: 'app_theme'
-  };
 
   // State
   let state = {
@@ -153,23 +144,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load settings from storage
   async function loadSettings() {
+    const storageKeys = getStorageKeys();
     try {
       const result = await chrome.storage.local.get([
-        STORAGE_KEYS.API_KEY,
-        STORAGE_KEYS.TARGET_LANGUAGE,
-        STORAGE_KEYS.SOURCE_LANGUAGE,
-        STORAGE_KEYS.TRANSLATION_MODE,
-        STORAGE_KEYS.CUSTOM_INSTRUCTIONS,
-        STORAGE_KEYS.THEME
+        storageKeys.API_KEY,
+        storageKeys.TARGET_LANGUAGE,
+        storageKeys.SOURCE_LANGUAGE,
+        storageKeys.TRANSLATION_MODE,
+        storageKeys.CUSTOM_INSTRUCTIONS,
+        storageKeys.THEME
       ]);
 
       // Update state with stored values
-      state.apiKey = result[STORAGE_KEYS.API_KEY] || '';
-      state.targetLanguage = result[STORAGE_KEYS.TARGET_LANGUAGE] || 'fa';
-      state.sourceLanguage = result[STORAGE_KEYS.SOURCE_LANGUAGE] || 'en';
-      state.translationMode = result[STORAGE_KEYS.TRANSLATION_MODE]?.mode || 'general';
-      state.customInstructions = result[STORAGE_KEYS.CUSTOM_INSTRUCTIONS] || '';
-      state.theme = result[STORAGE_KEYS.THEME] || 'auto';
+      state.apiKey = result[storageKeys.API_KEY] || '';
+      state.targetLanguage = result[storageKeys.TARGET_LANGUAGE] || 'fa';
+      state.sourceLanguage = result[storageKeys.SOURCE_LANGUAGE] || 'en';
+      state.translationMode = result[storageKeys.TRANSLATION_MODE]?.mode || 'general';
+      state.customInstructions = result[storageKeys.CUSTOM_INSTRUCTIONS] || '';
+      state.theme = result[storageKeys.THEME] || 'auto';
 
       // Update UI
       apiKeyInput.value = state.apiKey;
@@ -216,8 +208,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Target language change
     targetLanguageSelect?.addEventListener('change', (e) => {
+      const storageKeys = getStorageKeys();
       state.targetLanguage = e.target.value;
-      saveSettings(STORAGE_KEYS.TARGET_LANGUAGE, state.targetLanguage);
+      saveSettings(storageKeys.TARGET_LANGUAGE, state.targetLanguage);
       updateDirectionText();
       targetLanguageSelect.dir = getLanguageDirection(state.targetLanguage);
       updateDocumentDirection(state.targetLanguage);
@@ -225,22 +218,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Translation mode change
     translationModeSelect?.addEventListener('change', (e) => {
+      const storageKeys = getStorageKeys();
       state.translationMode = e.target.value;
-      saveSettings(STORAGE_KEYS.TRANSLATION_MODE, { mode: state.translationMode });
+      saveSettings(storageKeys.TRANSLATION_MODE, { mode: state.translationMode });
     });
 
     // Custom instructions change
     customInstructionsTextarea?.addEventListener('change', (e) => {
+      const storageKeys = getStorageKeys();
       state.customInstructions = e.target.value;
-      saveSettings(STORAGE_KEYS.CUSTOM_INSTRUCTIONS, state.customInstructions);
+      saveSettings(storageKeys.CUSTOM_INSTRUCTIONS, state.customInstructions);
     });
 
     // Theme change
     themeRadios.forEach(radio => {
       radio.addEventListener('change', (e) => {
+        const storageKeys = getStorageKeys();
         if (e.target.checked) {
           state.theme = e.target.value;
-          saveSettings(STORAGE_KEYS.THEME, state.theme);
+          saveSettings(storageKeys.THEME, state.theme);
           applyTheme();
         }
       });
@@ -270,6 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Save API key
   async function saveApiKey() {
+    const storageKeys = getStorageKeys();
     const apiKey = apiKeyInput.value.trim();
     if (!apiKey) {
       showStatus('لطفاً کلید API را وارد کنید', 'error');
@@ -278,8 +275,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       state.apiKey = apiKey;
-      await saveSettings(STORAGE_KEYS.API_KEY, apiKey);
-      await saveSettings('app_settings', { apiKey });
+      await saveSettings(storageKeys.API_KEY, apiKey);
+      // await saveSettings('app_settings', { apiKey }); // Removed as per instruction
       showStatus('کلید API با موفقیت ذخیره شد', 'success');
       togglePanel(settingsPanel, false);
       updateApiStatus();
@@ -302,12 +299,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Swap translation direction
   function swapTranslationDirection() {
+    const storageKeys = getStorageKeys();
     const temp = state.sourceLanguage;
     state.sourceLanguage = state.targetLanguage;
     state.targetLanguage = temp;
 
-    saveSettings(STORAGE_KEYS.SOURCE_LANGUAGE, state.sourceLanguage);
-    saveSettings(STORAGE_KEYS.TARGET_LANGUAGE, state.targetLanguage);
+    saveSettings(storageKeys.SOURCE_LANGUAGE, state.sourceLanguage);
+    saveSettings(storageKeys.TARGET_LANGUAGE, state.targetLanguage);
 
     targetLanguageSelect.value = state.targetLanguage;
     targetLanguageSelect.dir = getLanguageDirection(state.targetLanguage);
@@ -558,6 +556,18 @@ function isRTLLanguage(langCode) {
     document.documentElement.dir = direction;
     document.documentElement.lang = langCode;
   }
+
+  // Listen for error messages from background script
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'error') {
+      // request.error is already the user-friendly string from background.js
+      showStatus(request.error, 'error');
+      // Optionally, you might want to log the context if provided
+      if (request.context) {
+        console.warn(`Error context from background: ${request.context}`);
+      }
+    }
+  });
 
   // Initialize the popup
   init();
